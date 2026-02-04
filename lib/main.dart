@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:math_expressions/math_expressions.dart'; // Importante para matemáticas
+import 'package:math_expressions/math_expressions.dart';
 
 void main() {
   runApp(const CalculatorApp());
@@ -12,8 +12,8 @@ class CalculatorApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Calculadora Pro',
-      theme: ThemeData.dark(), // Tema oscuro por defecto
+      title: 'Calculadora Básica',
+      theme: ThemeData.dark(),
       home: const CalculatorScreen(),
     );
   }
@@ -30,7 +30,6 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   String userInput = '';
   String answer = '';
 
-  // Lógica principal de botones
   void onButtonPressed(String value) {
     setState(() {
       if (value == 'C') {
@@ -48,61 +47,74 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     });
   }
 
-  // Validación: Evitar operadores dobles (ej: "30++") o inválidos
   void handleInput(String value) {
+    // Validar no empezar con operadores inválidos
     if (userInput.isEmpty) {
-      // No permitir iniciar con *, /, ) o +
       if (value == '*' || value == '/' || value == ')' || value == '+') {
-        return; 
+        return;
       }
     }
 
-    // Si el último caracter es un operador, y pones otro operador, reemplázalo
-    // (Excepción: a veces queremos escribir "(-5)")
+    // Evitar doble operador (ej: ++, --), pero permitir paréntesis
     if (userInput.isNotEmpty) {
       String lastChar = userInput.substring(userInput.length - 1);
       bool isLastOperator = "+-*/".contains(lastChar);
       bool isNewOperator = "+-*/".contains(value);
 
       if (isLastOperator && isNewOperator) {
-        // Reemplazar el operador anterior por el nuevo
         userInput = userInput.substring(0, userInput.length - 1) + value;
         return;
       }
     }
-    
+
     userInput += value;
   }
 
-  // Cálculo matemático real usando la librería
   void calculateResult() {
     try {
       String finalExpression = userInput;
-      // Reemplazar símbolos visuales por los de programación si usaste 'x' o '÷'
-      finalExpression = finalExpression.replaceAll('x', '*').replaceAll('÷', '/');
+
+      // Convertir (5)(5) -> (5)*(5)
+      finalExpression = finalExpression.replaceAll(')(', ')*(');
+
+      // Convertir 5(  -> 5*(  (Usamos expresiones regulares simples)
+      finalExpression = finalExpression.replaceAllMapped(
+        RegExp(r'(\d)\('),
+        (Match m) => '${m[1]}*(',
+      );
+
+      // Convertir )5  -> )*5
+      finalExpression = finalExpression.replaceAllMapped(
+        RegExp(r'\)(\d)'),
+        (Match m) => ')*${m[1]}',
+      );
+
+      // Reemplazo estándar
+      finalExpression = finalExpression
+          .replaceAll('x', '*')
+          .replaceAll('÷', '/');
 
       Parser p = Parser();
       Expression exp = p.parse(finalExpression);
       ContextModel cm = ContextModel();
-      
+
       double eval = exp.evaluate(EvaluationType.REAL, cm);
-      
-      // Validar división por cero (Infinity)
+
       if (eval.isInfinite || eval.isNaN) {
         answer = "Error";
       } else {
-        // Quitar el ".0" si es entero (ej: 5.0 -> 5)
         answer = eval.toString();
+        // Quitar el .0 si es entero
         if (answer.endsWith(".0")) {
           answer = answer.substring(0, answer.length - 2);
         }
       }
     } catch (e) {
-      answer = "Error"; // Error de sintaxis (ej: paréntesis sin cerrar)
+      answer = "Error";
     }
   }
 
-  // --- Widgets de la UI ---
+  // --- Widgets ---
 
   Widget buildButton(String text, {Color? color, Color? textColor}) {
     return Expanded(
@@ -112,15 +124,20 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
           onPressed: () => onButtonPressed(text),
           style: ElevatedButton.styleFrom(
             backgroundColor: color ?? Colors.grey[850],
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-            padding: const EdgeInsets.all(15),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(15),
+            ),
+            padding: const EdgeInsets.all(0), // Padding 0 para ajustar mejor
           ),
-          child: Text(
-            text,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: textColor ?? Colors.white,
+          child: FittedBox(
+            // Texto se achica si no cabe
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: textColor ?? Colors.white,
+              ),
             ),
           ),
         ),
@@ -128,7 +145,6 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     );
   }
 
-  // Pantalla de resultados
   Widget buildDisplay() {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -145,14 +161,18 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
           const SizedBox(height: 10),
           Text(
             answer,
-            style: const TextStyle(fontSize: 48, color: Colors.white, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              fontSize: 48,
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ],
       ),
     );
   }
 
-  // Layout Vertical (Portrait)
+  // Diseño Vertical (Celular normal)
   Widget verticalLayout() {
     return Column(
       children: [
@@ -161,29 +181,56 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
           flex: 2,
           child: Column(
             children: [
-              // Fila 1
-              Expanded(child: Row(children: [
-                buildButton('C', color: Colors.redAccent),
-                buildButton('(', color: Colors.blueGrey),
-                buildButton(')', color: Colors.blueGrey),
-                buildButton('/', color: Colors.orange),
-              ])),
-              // Fila 2
-              Expanded(child: Row(children: [
-                buildButton('7'), buildButton('8'), buildButton('9'), buildButton('*', color: Colors.orange),
-              ])),
-              // Fila 3
-              Expanded(child: Row(children: [
-                buildButton('4'), buildButton('5'), buildButton('6'), buildButton('-', color: Colors.orange),
-              ])),
-              // Fila 4
-              Expanded(child: Row(children: [
-                buildButton('1'), buildButton('2'), buildButton('3'), buildButton('+', color: Colors.orange),
-              ])),
-              // Fila 5
-              Expanded(child: Row(children: [
-                buildButton('0'), buildButton('.'), buildButton('DEL'), buildButton('=', color: Colors.green),
-              ])),
+              Expanded(
+                child: Row(
+                  children: [
+                    buildButton('C', color: Colors.redAccent),
+                    buildButton('(', color: Colors.blueGrey),
+                    buildButton(')', color: Colors.blueGrey),
+                    buildButton('/', color: Colors.orange),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Row(
+                  children: [
+                    buildButton('7'),
+                    buildButton('8'),
+                    buildButton('9'),
+                    buildButton('*', color: Colors.orange),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Row(
+                  children: [
+                    buildButton('4'),
+                    buildButton('5'),
+                    buildButton('6'),
+                    buildButton('-', color: Colors.orange),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Row(
+                  children: [
+                    buildButton('1'),
+                    buildButton('2'),
+                    buildButton('3'),
+                    buildButton('+', color: Colors.orange),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Row(
+                  children: [
+                    buildButton('0'),
+                    buildButton('.'),
+                    buildButton('DEL'),
+                    buildButton('=', color: Colors.green),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -191,7 +238,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     );
   }
 
-  // Layout Horizontal (Landscape) - Más botones si quisieras
+  // Diseño Horizontal
   Widget horizontalLayout() {
     return Row(
       children: [
@@ -200,21 +247,57 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
           flex: 1,
           child: Column(
             children: [
-              Expanded(child: Row(children: [buildButton('7'), buildButton('8'), buildButton('9'), buildButton('/')])),
-              Expanded(child: Row(children: [buildButton('4'), buildButton('5'), buildButton('6'), buildButton('*')])),
-              Expanded(child: Row(children: [buildButton('1'), buildButton('2'), buildButton('3'), buildButton('-')])),
-              Expanded(child: Row(children: [buildButton('0'), buildButton('C', color: Colors.red), buildButton('='), buildButton('+')])),
-            ],
-          ),
-        ),
-         Expanded(
-          flex: 1, // Panel extra para Landscape
-          child: Column(
-            children: [
-              Expanded(child: Row(children: [buildButton('('), buildButton(')')])),
-              Expanded(child: Row(children: [buildButton('sin'), buildButton('cos')])), // Ejemplo futuro
-              Expanded(child: Row(children: [buildButton('.'), buildButton('DEL')])),
-              Expanded(child: Row(children: [buildButton('^'), buildButton('sqrt')])),
+              // Distribución más amplia para aprovechar el espacio
+              Expanded(
+                child: Row(
+                  children: [
+                    buildButton('C', color: Colors.red),
+                    buildButton('('),
+                    buildButton(')'),
+                    buildButton('/'),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Row(
+                  children: [
+                    buildButton('7'),
+                    buildButton('8'),
+                    buildButton('9'),
+                    buildButton('*'),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Row(
+                  children: [
+                    buildButton('4'),
+                    buildButton('5'),
+                    buildButton('6'),
+                    buildButton('-'),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Row(
+                  children: [
+                    buildButton('1'),
+                    buildButton('2'),
+                    buildButton('3'),
+                    buildButton('+'),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Row(
+                  children: [
+                    buildButton('0'),
+                    buildButton('.'),
+                    buildButton('DEL'),
+                    buildButton('=', color: Colors.green),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
