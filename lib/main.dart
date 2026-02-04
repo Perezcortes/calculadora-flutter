@@ -94,7 +94,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
           .replaceAll('x', '*')
           .replaceAll('÷', '/');
 
-      Parser p = Parser();
+      ShuntingYardParser p = ShuntingYardParser();
       Expression exp = p.parse(finalExpression);
       ContextModel cm = ContextModel();
 
