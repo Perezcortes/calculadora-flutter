@@ -89,4 +89,10 @@ lib/main.dart
 - **buildButton** → Botones reutilizables con estilos personalizados
 - **verticalLayout / horizontalLayout** → Distribución dinámica según la orientación del dispositivo
 
+## 📸 Capturas de Pantalla
+
+| Modo Vertical | Validación de Error | Modo Horizontal |
+|:---:|:---:|:---:|
+| ![Inicio](screenshots/inicio.jpeg) | ![Error](screenshots/error.jpeg) | ![Landscape](screenshots/horizontal.jpeg) |
+
 ---
